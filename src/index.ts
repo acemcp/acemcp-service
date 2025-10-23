@@ -4,10 +4,12 @@ import { createWorkersAI } from 'workers-ai-provider';
 import { Ai } from '@cloudflare/workers-types';
 import z from "zod";
 import { createClient } from '@supabase/supabase-js'
-import { env, getRuntimeKey } from 'hono/adapter'
+import { env } from 'hono/adapter'
 import { uuid } from 'zod/v4';
 type Env = {
   AI: Ai;
+  SUPABASE_URL: string;
+  SUPABASE_ANON_KEY: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -46,11 +48,28 @@ app.options('*', async (c) => {
 
 app.post('/template', async (c) => {
 
-
+try {
   let workersai = createWorkersAI({ binding: c.env.AI });
 
+
+
+
+// fix this
+
+
+
+// type Bindings = {
+//   SECRET_KEY: string
+// }
+// const app = new Hono<{ Bindings: Bindings }>()
+// app.get('/env', (c) => {
+//   const SECRET_KEY = c.env.SECRET_KEY
+//   return c.text(SECRET_KEY)
+// })
+
+
   const { SUPABASE_URL, SUPABASE_ANON_KEY } = env<{ SUPABASE_URL: string, SUPABASE_ANON_KEY: string }>(c)
-  const supabase = createClient("https://sfaqwyumdxebchjxyyyv.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmYXF3eXVtZHhlYmNoanh5eXl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxODA4MjAsImV4cCI6MjA3NTc1NjgyMH0.c6lfauF-dlq0txeC0FiBbBQ5HuNDNxTYTsd0AEZKshU");
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 
 
@@ -232,25 +251,58 @@ Re-emphasize the key aspects of the prompt, especially the constraints, output f
 
   console.log("PromptMetaData", PromptMetaData);
 
+// ✅ Validation before inserting
+if (!PromptMetaData?.Identity || !PromptMetaData?.Instructions || !PromptMetaData?.Tone) {
+  return c.json({ error: "Incomplete metadata generated" }, 400);
+}
+
+
+// fix dynamic id generation method
+
+
+
+  const dynamicId = crypto.randomUUID();
+
   const { data: ProjectMetadata, error: projectError } = await supabase
-    .from('ProjectMetadata')
-    .insert([
-      { id: "b2103e6c-487b-499c-a652-7ce63155ad7b", identity: PromptMetaData.Identity, instructions: PromptMetaData.Instructions, tone: PromptMetaData.Tone },
-    ])
-    .select()
+  .from('ProjectMetadata')
+  .insert([
+    {
+      id: dynamicId,
+      identity: PromptMetaData.Identity,
+      instructions: PromptMetaData.Instructions,
+      tone: PromptMetaData.Tone,
+    },
+  ])
+  .select();
 
+if (projectError || !ProjectMetadata) {
+  console.error("Supabase insert error:", projectError);
+  return c.json({ error: projectError?.message || "Failed to insert metadata" }, 500);
+}
 
-  console.log("ProjectMetadata", ProjectMetadata)
+console.log("ProjectMetadata", ProjectMetadata);
   console.log("projectError", projectError)
 
+  if (projectError) {
+    console.error("Supabase insert error:", projectError);
+    return c.json({ error: projectError.message }, 500);
+  }
 
+  console.log("ProjectMetadata", ProjectMetadata);
+  return c.json({ success: true, projectMetadata: ProjectMetadata });
+} catch (err: any) {
+  console.error("Error in /template:", err);
+  return c.json({ error: err.message || "Internal Server Error" }, 500);
+}
 
 });
 
 
 app.post('/chat', async (c) => {
+  try {
 
   let workersai = createWorkersAI({ binding: c.env.AI });
+  const { messages } = await c.req.json(); // ✅ FIX: Extract messages from request
 
 
   const result = await streamText({
@@ -267,6 +319,11 @@ app.post('/chat', async (c) => {
       'Access-Control-Allow-Credentials': 'true',
     }
   });
+} catch (err: any) {
+  console.error("Error in /chat:", err);
+  return c.json({ error: err.message || "Internal Server Error" }, 500);
+}
+
 });
 
 
