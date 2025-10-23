@@ -9,9 +9,12 @@
   "dependencies": {
     "@ai-sdk/mistral": "^2.0.19",
     "@hono/node-server": "^1.19.5",
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.76.1",
     "ai": "^5.0.76",
     "hono": "^4.10.1",
-    "workers-ai-provider": "^2.0.0"
+    "workers-ai-provider": "^2.0.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251011.0",
