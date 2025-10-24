@@ -1,2 +1,5 @@
 [ai]
 binding = "AI"
+[vars]
+SUPABASE_URL = "https://sfaqwyumdxebchjxyyyv.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmYXF3eXVtZHhlYmNoanh5eXl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxODA4MjAsImV4cCI6MjA3NTc1NjgyMH0.c6lfauF-dlq0txeC0FiBbBQ5HuNDNxTYTsd0AEZKshU"

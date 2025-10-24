@@ -4,14 +4,20 @@ import { createWorkersAI } from 'workers-ai-provider';
 import { Ai } from '@cloudflare/workers-types';
 import z from "zod";
 import { createClient } from '@supabase/supabase-js'
-import { env, getRuntimeKey } from 'hono/adapter'
+import { env } from 'hono/adapter'
 import { uuid } from 'zod/v4';
+import { createMistral } from "@ai-sdk/mistral";
 type Env = {
   AI: Ai;
+  SUPABASE_URL: string;
+  SUPABASE_ANON_KEY: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();
 
+const mistral = createMistral({
+  apiKey: "cAdRTLCViAHCn0ddFFEe50ULu04MbUvZ",
+});
 
 
 const MCPInputSchema = z
@@ -46,227 +52,170 @@ app.options('*', async (c) => {
 
 app.post('/template', async (c) => {
 
+  try {
+    let workersai = createWorkersAI({ binding: c.env.AI });
 
-  let workersai = createWorkersAI({ binding: c.env.AI });
-
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = env<{ SUPABASE_URL: string, SUPABASE_ANON_KEY: string }>(c)
-  const supabase = createClient("https://sfaqwyumdxebchjxyyyv.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmYXF3eXVtZHhlYmNoanh5eXl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxODA4MjAsImV4cCI6MjA3NTc1NjgyMH0.c6lfauF-dlq0txeC0FiBbBQ5HuNDNxTYTsd0AEZKshU");
-
-
-
-
-
-
-  const { messages, text }: { messages: any, text: string } =
-    await c.req.json();
+    const { SUPABASE_URL, SUPABASE_ANON_KEY } = env<{ SUPABASE_URL: string, SUPABASE_ANON_KEY: string }>(c)
+    // const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = createClient("https://sfaqwyumdxebchjxyyyv.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmYXF3eXVtZHhlYmNoanh5eXl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxODA4MjAsImV4cCI6MjA3NTc1NjgyMH0.c6lfauF-dlq0txeC0FiBbBQ5HuNDNxTYTsd0AEZKshU");
+    const { messages, text, projectId }: { messages: any, text: string, projectId: any } =
+      await c.req.json();
 
 
-  console.log("customKey", text)
-
-  //   const { text: copy } = await generateText({
-  //     model: workersai('@cf/meta/llama-4-scout-17b-16e-instruct'),
-
-  //     prompt: `Write a System prompt for ${text} the business requirements and also focus of the user intent 
-
-  // <Identity>
-  // You are a helpful <Persona>Who or what the model is acting as. Also called "role" or "vision</Persona> who is an expert in ${text}
-  // </Identity>
-  // <Instructions>
-  //  Only output a single word in your response with no additional formatting
-  //   or commentary.
-  //  Your response should only be one of the words "Positive", "Negative", or
-  //   "Neutral" depending on the sentiment of the product review you are given.
-  // </Instructions>
-  //     }
+    console.log("projectId", projectId)
 
 
-  //     <Tone>Respond in a casual and technical manner.</Tone>
-  //     exmple : 
+    const { text: copy } = await generateText({
+      model: mistral("mistral-medium-latest"),
 
-  //     <OBJECTIVE_AND_PERSONA>
-  // You are a [insert a persona, such as a "math teacher" or "automotive expert"]. Your task is to...
-  // </OBJECTIVE_AND_PERSONA>
-
-  // <INSTRUCTIONS>
-  // To complete the task, you need to follow these steps:
-  // 1.
-  // 2.
-  // ...
-  // </INSTRUCTIONS>
-
-  // ------------- Optional Components ------------
-
-  // <CONSTRAINTS>
-  // Dos and don'ts for the following aspects
-  // 1. Dos
-  // 2. Don'ts
-  // </CONSTRAINTS>
-
-  // <CONTEXT>
-  // The provided context
-  // </CONTEXT>
-
-  // <OUTPUT_FORMAT>
-  // The output format must be
-  // 1.
-  // 2.
-  // ...
-  // </OUTPUT_FORMAT>
-
-  // <FEW_SHOT_EXAMPLES>
-  // Here we provide some examples:
-  // 1. Example #1
-  // Input:
-  // Thoughts:
-  // Output:
-  // ...
-  // </FEW_SHOT_EXAMPLES>
-
-  // <RECAP>
-  // Re-emphasize the key aspects of the prompt, especially the constraints, output format, etc.
-  // </RECAP>
-  //     `,
-  //   });
-  const { text: copy } = await generateText({
-    model: workersai('@cf/meta/llama-4-scout-17b-16e-instruct'),
-
-    prompt: `Write a System prompt for ${text} the business requirements and also focus of the user intent 
- 
-<Identity>
-You are a helpful <Persona>Who or what the model is acting as. Also called "role" or "vision</Persona> who is an expert in ${text}
-</Identity>
-<Instructions>
-Only output a single word in your response with no additional formatting
-or commentary.
-Your response should only be one of the words "Positive", "Negative", or
-"Neutral" depending on the sentiment of the product review you are given.
-</Instructions>
-  }
-
-
-  <Tone>Respond in a casual and technical manner.</Tone>
-  exmple : 
-
-  <OBJECTIVE_AND_PERSONA>
-You are a [insert a persona, such as a "math teacher" or "automotive expert"]. Your task is to...
-</OBJECTIVE_AND_PERSONA>
-
-<INSTRUCTIONS>
-To complete the task, you need to follow these steps:
-1.
-2.
-...
-</INSTRUCTIONS>
-
-------------- Optional Components ------------
-
-<CONSTRAINTS>
-Dos and don'ts for the following aspects
-1. Dos
-2. Don'ts
-</CONSTRAINTS>
-
-<CONTEXT>
-The provided context
-</CONTEXT>
-
-<OUTPUT_FORMAT>
-The output format must be
-1.
-2.
-...
-</OUTPUT_FORMAT>
-
-<FEW_SHOT_EXAMPLES>
-Here we provide some examples:
-1. Example #1
-Input:
-Thoughts:
-Output:
-...
-</FEW_SHOT_EXAMPLES>
-
-<RECAP>
-Re-emphasize the key aspects of the prompt, especially the constraints, output format, etc.
-</RECAP>
-  `,
-  });
-
-  console.log("copy", copy)
+      prompt: `Write a System prompt for ${text} the business requirements and also focus of the user intent 
+     
+  <Identity>
+  You are a helpful <Persona>Who or what the model is acting as. Also called "role" or "vision</Persona> who is an expert in ${text}
+  </Identity>
+  <Instructions>
+   Only output a single word in your response with no additional formatting
+    or commentary.
+   Your response should only be one of the words "Positive", "Negative", or
+    "Neutral" depending on the sentiment of the product review you are given.
+  </Instructions>
+      }
+  
+  
+      <Tone>Respond in a casual and technical manner.</Tone>
+      exmple : 
+  
+      <OBJECTIVE_AND_PERSONA>
+  You are a [insert a persona, such as a "math teacher" or "automotive expert"]. Your task is to...
+  </OBJECTIVE_AND_PERSONA>
+  
+  <INSTRUCTIONS>
+  To complete the task, you need to follow these steps:
+  1.
+  2.
+  ...
+  </INSTRUCTIONS>
+  
+  ------------- Optional Components ------------
+  
+  <CONSTRAINTS>
+  Dos and don'ts for the following aspects
+  1. Dos
+  2. Don'ts
+  </CONSTRAINTS>
+  
+  <CONTEXT>
+  The provided context
+  </CONTEXT>
+  
+  <OUTPUT_FORMAT>
+  The output format must be
+  1.
+  2.
+  ...
+  </OUTPUT_FORMAT>
+  
+  <FEW_SHOT_EXAMPLES>
+  Here we provide some examples:
+  1. Example #1
+  Input:
+  Thoughts:
+  Output:
+  ...
+  </FEW_SHOT_EXAMPLES>
+  
+  <RECAP>
+  Re-emphasize the key aspects of the prompt, especially the constraints, output format, etc.
+  </RECAP>
+      `,
+    });
 
 
-  // const { data: projects, error: fetchErr } = await supabase
-  //   .from('Project')
-  //   .select('id, name')
-  //   .eq('name', projectName)
-  //   .limit(1);
-
-  // if (fetchErr) throw fetchErr;
-
-  // if (!projects || projects.length === 0) {
-  //   throw new Error('Project not found');
-  // }
-
-  // const projectId = projects[0].id;
-
-
-
-
-
-  const { object: PromptMetaData } = await generateObject({
-    model: workersai('@cf/meta/llama-4-scout-17b-16e-instruct'),
-    schema: z.object({
-      Identity: z.string(),
-      Instructions: z.string(),
-      Tone: z.string(),
-    }),
-    prompt: `Evaluate this System prompt for Business requirements and user intent:
+    const { object: PromptMetaData } = await generateObject({
+      model: mistral("mistral-medium-latest"),
+      maxRetries: 3,
+      schema: z.object({
+        Identity: z.string(),
+        Instructions: z.string(),
+        Tone: z.string(),
+      }),
+      messages: [
+        {
+          role: 'user',
+          content: `Evaluate this System prompt for Business requirements and user intent:
    and extract the proper Identity, Instructions  and Tone for the ai agent for the business
+    Prompt to evaluate: ${copy}`
+        }
+      ],
+    });
 
-    Prompt to evaluate: ${copy}`,
-  });
+    console.log("PromptMetaData", PromptMetaData);
 
-
-
-
-
-  console.log("PromptMetaData", PromptMetaData);
-
-  const { data: ProjectMetadata, error: projectError } = await supabase
-    .from('ProjectMetadata')
-    .insert([
-      { id: "b2103e6c-487b-499c-a652-7ce63155ad7b", identity: PromptMetaData.Identity, instructions: PromptMetaData.Instructions, tone: PromptMetaData.Tone },
-    ])
-    .select()
+    // ✅ Validation before inserting
+    if (!PromptMetaData?.Identity || !PromptMetaData?.Instructions || !PromptMetaData?.Tone) {
+      return c.json({ error: "Incomplete metadata generated" }, 400);
+    }
 
 
-  console.log("ProjectMetadata", ProjectMetadata)
-  console.log("projectError", projectError)
 
 
+
+    const { data, error } = await supabase
+      .from('ProjectMetadata')
+      .upsert({ id: projectId, identity: PromptMetaData?.Identity, instructions: PromptMetaData?.Instructions, tone: PromptMetaData?.Tone })
+      .select()
+
+    if (error || !data) {
+      console.error("Supabase insert error:", error);
+      return c.json({ error: error?.message || "Failed to insert metadata" }, 500);
+    }
+
+    console.log("ProjectMetadata", data);
+
+    c.status(200)
+    return c.json({ success: true, projectMetadata: data }, {
+      headers: {
+        'Content-Type': 'text/x-unknown',
+        'content-encoding': 'identity',
+        'transfer-encoding': 'chunked',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': 'true',
+      }
+    });
+  } catch (err: any) {
+    console.error("Error in /template:", err);
+    return c.json({ error: err.message || "Internal Server Error" }, 500);
+  }
 
 });
 
 
 app.post('/chat', async (c) => {
+  try {
 
-  let workersai = createWorkersAI({ binding: c.env.AI });
+    let workersai = createWorkersAI({ binding: c.env.AI });
+    const { messages } = await c.req.json(); // ✅ FIX: Extract messages from request
 
 
-  const result = await streamText({
-    model: workersai('@cf/meta/llama-4-scout-17b-16e-instruct'),
-    messages: convertToModelMessages(messages)
-  });
+    const result = await streamText({
+      model: mistral("mistral-medium-latest"),
+      messages: convertToModelMessages(messages)
+    });
 
-  return result.toUIMessageStreamResponse({
-    headers: {
-      'Content-Type': 'text/x-unknown',
-      'content-encoding': 'identity',
-      'transfer-encoding': 'chunked',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Credentials': 'true',
-    }
-  });
+    return result.toUIMessageStreamResponse({
+      headers: {
+        'Content-Type': 'text/x-unknown',
+        'content-encoding': 'identity',
+        'transfer-encoding': 'chunked',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': 'true',
+      }
+    });
+  } catch (err: any) {
+    console.error("Error in /chat:", err);
+    return c.json({ error: err.message || "Internal Server Error" }, 500);
+  }
+
 });
 
 
