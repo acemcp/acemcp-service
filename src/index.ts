@@ -232,11 +232,17 @@ app.post("/mcp", async (c) => {
       const { SUPABASE_URL, SUPABASE_ANON_KEY } = env<{ SUPABASE_URL: string, SUPABASE_ANON_KEY: string }>(c)
       const supabase = createClient("https://sfaqwyumdxebchjxyyyv.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmYXF3eXVtZHhlYmNoanh5eXl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxODA4MjAsImV4cCI6MjA3NTc1NjgyMH0.c6lfauF-dlq0txeC0FiBbBQ5HuNDNxTYTsd0AEZKshU");
 
+
+      console.log("projectId" , projectId);
+      
       const { data: configs, error } = await supabase
         .from("MCPConfig")
         .select("*")
         .eq("projectId", projectId);
 
+
+        console.log("configs" , configs);
+        
       if (error) {
         throw new Error("Failed to fetch MCP configs" , error);
       }
