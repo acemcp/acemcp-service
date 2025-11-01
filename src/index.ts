@@ -9,6 +9,7 @@ import { experimental_createMCPClient as createMCPClient } from "@ai-sdk/mcp";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { createMistral } from "@ai-sdk/mistral";
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { cors } from 'hono/cors';
 
 type Env = {
   AI: Ai;
@@ -16,7 +17,22 @@ type Env = {
 
 const app = new Hono<{ Bindings: Env }>();
 
-
+app.use(
+  "*",
+  cors({
+    origin: (origin) => {
+      // Whitelist your frontend URLs
+      const allowed = ["http://localhost:3000", "https://your-frontend.vercel.app"];
+      if (allowed.includes(origin)) return origin;
+      return "*"; // fallback
+    },
+    allowHeaders: ["Content-Type", "Authorization"],
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    exposeHeaders: ["Content-Length"],
+    maxAge: 600,
+    credentials: true,
+  })
+);
 
 app.options('*', async (c) => {
   return new Response(null, {
@@ -141,8 +157,16 @@ Re-emphasize the key aspects of the prompt, especially the constraints, output f
 
 
   if (ProjectMetadata && ProjectMetadata[0]) {
-    return new Response('ok', { status: 200 })
+    return new Response("OK", {
+  status: 200,
+  headers: {
+    "Content-Type": "text/plain",
+    "Access-Control-Allow-Origin": "*",
+  },
+})
   }
+
+  
   if (projectError) {
     return new Response(JSON.stringify({ error: projectError.message }), { status: 500 })
   }
