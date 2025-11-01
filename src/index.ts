@@ -1,15 +1,22 @@
-import { Hono } from 'hono';
-import { convertToModelMessages, generateObject, generateText, streamText, UIMessage, stepCountIs } from 'ai';
-import { createWorkersAI } from 'workers-ai-provider';
-import { Ai } from '@cloudflare/workers-types';
+import { Hono } from "hono";
+import {
+  convertToModelMessages,
+  generateObject,
+  generateText,
+  streamText,
+  UIMessage,
+  stepCountIs,
+} from "ai";
+import { createWorkersAI } from "workers-ai-provider";
+import { Ai } from "@cloudflare/workers-types";
 import z from "zod";
-import { createClient } from '@supabase/supabase-js'
-import { env } from 'hono/adapter'
+import { createClient } from "@supabase/supabase-js";
+import { env } from "hono/adapter";
 import { experimental_createMCPClient as createMCPClient } from "@ai-sdk/mcp";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { createMistral } from "@ai-sdk/mistral";
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { cors } from 'hono/cors';
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { cors } from "hono/cors";
 
 type Env = {
   AI: Ai;
@@ -22,7 +29,10 @@ app.use(
   cors({
     origin: (origin) => {
       // Whitelist your frontend URLs
-      const allowed = ["http://localhost:3000", "https://your-frontend.vercel.app"];
+      const allowed = [
+        "http://localhost:3000",
+        "https://your-frontend.vercel.app",
+      ];
       if (allowed.includes(origin)) return origin;
       return "*"; // fallback
     },
@@ -34,33 +44,40 @@ app.use(
   })
 );
 
-app.options('*', async (c) => {
+app.options("*", async (c) => {
   return new Response(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Access-Control-Max-Age': '86400',
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Max-Age": "86400",
     },
   });
 });
 
-app.post('/template', async (c) => {
-
-
+app.post("/template", async (c) => {
   let workersai = createWorkersAI({ binding: c.env.AI });
 
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = env<{ SUPABASE_URL: string, SUPABASE_ANON_KEY: string }>(c)
-  const supabase = createClient("https://sfaqwyumdxebchjxyyyv.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmYXF3eXVtZHhlYmNoanh5eXl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxODA4MjAsImV4cCI6MjA3NTc1NjgyMH0.c6lfauF-dlq0txeC0FiBbBQ5HuNDNxTYTsd0AEZKshU");
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = env<{
+    SUPABASE_URL: string;
+    SUPABASE_ANON_KEY: string;
+  }>(c);
+  const supabase = createClient(
+    "https://sfaqwyumdxebchjxyyyv.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmYXF3eXVtZHhlYmNoanh5eXl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxODA4MjAsImV4cCI6MjA3NTc1NjgyMH0.c6lfauF-dlq0txeC0FiBbBQ5HuNDNxTYTsd0AEZKshU"
+  );
 
-  const { messages, text, projectId }: { messages: any, text: string, projectId: any } = await c.req.json();
+  const {
+    messages,
+    text,
+    projectId,
+  }: { messages: any; text: string; projectId: any } = await c.req.json();
 
-
-  console.log("projectId in templeate", projectId)
+  console.log("projectId in templeate", projectId);
 
   const { text: copy } = await generateText({
-    model: workersai('@cf/meta/llama-4-scout-17b-16e-instruct'),
+    model: workersai("@cf/meta/llama-4-scout-17b-16e-instruct"),
 
     prompt: `Write a System prompt for ${text} the business requirements and also focus of the user intent 
  
@@ -124,15 +141,10 @@ Re-emphasize the key aspects of the prompt, especially the constraints, output f
   `,
   });
 
-  console.log("copy", copy)
-
-
-
-
-
+  console.log("copy", copy);
 
   const { object: PromptMetaData } = await generateObject({
-    model: workersai('@cf/meta/llama-4-scout-17b-16e-instruct'),
+    model: workersai("@cf/meta/llama-4-scout-17b-16e-instruct"),
     schema: z.object({
       Identity: z.string(),
       Instructions: z.string(),
@@ -144,17 +156,17 @@ Re-emphasize the key aspects of the prompt, especially the constraints, output f
     Prompt to evaluate: ${copy}`,
   });
 
-
-
   const { data: ProjectMetadata, error: projectError } = await supabase
-    .from('ProjectMetadata')
+    .from("ProjectMetadata")
     .upsert([
-      { id: projectId, identity: PromptMetaData.Identity, instructions: PromptMetaData.Instructions, tone: PromptMetaData.Tone },
+      {
+        id: projectId,
+        identity: PromptMetaData.Identity,
+        instructions: PromptMetaData.Instructions,
+        tone: PromptMetaData.Tone,
+      },
     ])
-    .select()
-
-
-
+    .select();
 
   if (ProjectMetadata && ProjectMetadata[0]) {
     return new Response("OK", {
@@ -163,88 +175,76 @@ Re-emphasize the key aspects of the prompt, especially the constraints, output f
         "Content-Type": "text/plain",
         "Access-Control-Allow-Origin": "*",
       },
-    })
+    });
   }
-
 
   if (projectError) {
-    return new Response(JSON.stringify({ error: projectError.message }), { status: 500 })
+    return new Response(JSON.stringify({ error: projectError.message }), {
+      status: 500,
+    });
   }
-
-
 });
 
-
-app.post('/chat', async (c) => {
-
+app.post("/chat", async (c) => {
   const { messages }: { messages: UIMessage[] } = await c.req.json();
   let workersai = createWorkersAI({ binding: c.env.AI });
 
-
   const result = await streamText({
-    model: workersai('@cf/meta/llama-4-scout-17b-16e-instruct'),
-    messages: convertToModelMessages(messages)
+    model: workersai("@cf/meta/llama-4-scout-17b-16e-instruct"),
+    messages: convertToModelMessages(messages),
   });
 
   return result.toUIMessageStreamResponse({
     headers: {
-      'Content-Type': 'text/x-unknown',
-      'content-encoding': 'identity',
-      'transfer-encoding': 'chunked',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Credentials': 'true',
-    }
+      "Content-Type": "text/x-unknown",
+      "content-encoding": "identity",
+      "transfer-encoding": "chunked",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Credentials": "true",
+    },
   });
 });
 
-
-
-
-
-
 app.post("/mcp", async (c) => {
-
-  const { messages, projectId }: { messages: UIMessage[]; projectId: any } = await c.req.json();
+  const { messages, projectId }: { messages: UIMessage[]; projectId: any } =
+    await c.req.json();
   let workersai = createWorkersAI({ binding: c.env.AI });
   const mistral = createMistral({
     apiKey: "cAdRTLCViAHCn0ddFFEe50ULu04MbUvZ",
   });
 
-
   const google = createGoogleGenerativeAI({
     apiKey: "AIzaSyBAh9uhf8UYMdBH6YnFsqk6S4U3a38d8R0",
   });
 
-
-
-  console.log("projectId", projectId)
+  console.log("projectId", projectId);
   // Cache combined tools per projectId
   let mcpToolsCache: Record<string, any> = {};
 
-
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = env<{
+    SUPABASE_URL: string;
+    SUPABASE_ANON_KEY: string;
+  }>(c);
+  const supabase = createClient(
+    "https://sfaqwyumdxebchjxyyyv.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmYXF3eXVtZHhlYmNoanh5eXl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxODA4MjAsImV4cCI6MjA3NTc1NjgyMH0.c6lfauF-dlq0txeC0FiBbBQ5HuNDNxTYTsd0AEZKshU"
+  );
 
   async function getMCPTools(projectId: string) {
-
     console.log("projectId in func", projectId);
 
-
     if (!mcpToolsCache[projectId]) {
-      const { SUPABASE_URL, SUPABASE_ANON_KEY } = env<{ SUPABASE_URL: string, SUPABASE_ANON_KEY: string }>(c)
-      const supabase = createClient("https://sfaqwyumdxebchjxyyyv.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmYXF3eXVtZHhlYmNoanh5eXl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxODA4MjAsImV4cCI6MjA3NTc1NjgyMH0.c6lfauF-dlq0txeC0FiBbBQ5HuNDNxTYTsd0AEZKshU");
+      console.log("projectId", projectId);
 
-
-      console.log("projectId" , projectId);
-      
       const { data: configs, error } = await supabase
         .from("MCPConfig")
         .select("*")
         .eq("projectId", projectId);
 
+      console.log("configs", configs);
 
-        console.log("configs" , configs);
-        
       if (error) {
-        throw new Error("Failed to fetch MCP configs" , error);
+        throw new Error("Failed to fetch MCP configs", error);
       }
 
       if (!configs || configs.length === 0) {
@@ -257,19 +257,19 @@ app.post("/mcp", async (c) => {
         const transportOptions =
           config.authHeader && config.authToken
             ? {
-              requestInit: {
-                headers: {
-                  [config.authHeader]: config.authToken.startsWith("Bearer ")
-                    ? config.authToken
-                    : `Bearer ${config.authToken}`,
+                requestInit: {
+                  headers: {
+                    [config.authHeader]: config.authToken.startsWith("Bearer ")
+                      ? config.authToken
+                      : `Bearer ${config.authToken}`,
+                  },
                 },
-              },
-            }
+              }
             : undefined;
 
         const transport = new StreamableHTTPClientTransport(
           new URL(config.serverUrl),
-          transportOptions,
+          transportOptions
         );
 
         const mcpClient = await createMCPClient({
@@ -277,50 +277,36 @@ app.post("/mcp", async (c) => {
         });
         const tools = await mcpClient.tools();
 
-
-
         // Merge tools, assuming no conflicts in tool names
         Object.assign(allTools, tools);
       }
 
-      mcpToolsCache = { ...mcpToolsCache, ...allTools }
+      mcpToolsCache = { ...mcpToolsCache, ...allTools };
     }
     return mcpToolsCache;
   }
 
-
-
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = env<{ SUPABASE_URL: string, SUPABASE_ANON_KEY: string }>(c)
-  const supabase = createClient("https://sfaqwyumdxebchjxyyyv.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmYXF3eXVtZHhlYmNoanh5eXl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxODA4MjAsImV4cCI6MjA3NTc1NjgyMH0.c6lfauF-dlq0txeC0FiBbBQ5HuNDNxTYTsd0AEZKshU");
-
   let { data: ProjectMetadata, error } = await supabase
-    .from('ProjectMetadata')
+    .from("ProjectMetadata")
     .select("*")
-    .eq('id', projectId)
-
-
+    .eq("id", projectId);
 
   if (error) {
-    console.log("error", error)
+    console.log("error", error);
   }
 
   console.log("ProjectMetadata", ProjectMetadata);
 
-
-  let [ProjectMetadataObj]: any = ProjectMetadata
-  let { identity, instructions, tone }: any = ProjectMetadataObj
+  let [ProjectMetadataObj]: any = ProjectMetadata;
+  let { identity, instructions, tone }: any = ProjectMetadataObj;
 
   if (!projectId) {
     return new Response("Project ID required", { status: 400 });
   }
   //fetch config
-  let tools = await getMCPTools(projectId)
-
-
+  let tools = await getMCPTools(projectId);
 
   try {
-
-
     const result = streamText({
       system: `You are a helpful  ${identity} assistant with access to mcp tools
       
@@ -331,43 +317,33 @@ app.post("/mcp", async (c) => {
       if you dont have any answers then say "I dont have any answers"
       
       `,
-      model: workersai('@cf/meta/llama-4-scout-17b-16e-instruct'),
+      model: workersai("@cf/meta/llama-4-scout-17b-16e-instruct"),
       tools,
       toolChoice: "auto",
       stopWhen: [stepCountIs(10)],
       messages: convertToModelMessages(messages),
     });
 
-
-
-    return result.toUIMessageStreamResponse(
-
-
-      {
-        headers: {
-          // add these headers to ensure that the
-          // response is chunked and streamed
-          'Content-Type': 'text/x-unknown',
-          'content-encoding': 'identity',
-          'transfer-encoding': 'chunked',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Credentials': 'true',
-        }
-      }
-    );
+    return result.toUIMessageStreamResponse({
+      headers: {
+        // add these headers to ensure that the
+        // response is chunked and streamed
+        "Content-Type": "text/x-unknown",
+        "content-encoding": "identity",
+        "transfer-encoding": "chunked",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Credentials": "true",
+      },
+    });
   } catch (error) {
     console.error("Error occurred while processing request:", error);
     return new Response(
       error instanceof Error ? error.message : "Internal Server Error",
       {
         status: 500,
-      },
+      }
     );
   }
-
-})
-
+});
 
 export default app;
-
-
