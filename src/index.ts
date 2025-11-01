@@ -54,7 +54,7 @@ app.post('/template', async (c) => {
   const { SUPABASE_URL, SUPABASE_ANON_KEY } = env<{ SUPABASE_URL: string, SUPABASE_ANON_KEY: string }>(c)
   const supabase = createClient("https://sfaqwyumdxebchjxyyyv.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmYXF3eXVtZHhlYmNoanh5eXl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxODA4MjAsImV4cCI6MjA3NTc1NjgyMH0.c6lfauF-dlq0txeC0FiBbBQ5HuNDNxTYTsd0AEZKshU");
 
-  const { messages, text , projectId }: { messages: any, text: string   , projectId : any} = await c.req.json();
+  const { messages, text, projectId }: { messages: any, text: string, projectId: any } = await c.req.json();
 
 
   console.log("projectId in templeate", projectId)
@@ -158,15 +158,15 @@ Re-emphasize the key aspects of the prompt, especially the constraints, output f
 
   if (ProjectMetadata && ProjectMetadata[0]) {
     return new Response("OK", {
-  status: 200,
-  headers: {
-    "Content-Type": "text/plain",
-    "Access-Control-Allow-Origin": "*",
-  },
-})
+      status: 200,
+      headers: {
+        "Content-Type": "text/plain",
+        "Access-Control-Allow-Origin": "*",
+      },
+    })
   }
 
-  
+
   if (projectError) {
     return new Response(JSON.stringify({ error: projectError.message }), { status: 500 })
   }
@@ -177,6 +177,7 @@ Re-emphasize the key aspects of the prompt, especially the constraints, output f
 
 app.post('/chat', async (c) => {
 
+  const { messages }: { messages: UIMessage[] } = await c.req.json();
   let workersai = createWorkersAI({ binding: c.env.AI });
 
 
@@ -204,7 +205,7 @@ app.post('/chat', async (c) => {
 app.post("/mcp", async (c) => {
 
   const { messages, projectId }: { messages: UIMessage[]; projectId: any } = await c.req.json();
- let workersai = createWorkersAI({ binding: c.env.AI });
+  let workersai = createWorkersAI({ binding: c.env.AI });
   const mistral = createMistral({
     apiKey: "cAdRTLCViAHCn0ddFFEe50ULu04MbUvZ",
   });
@@ -224,7 +225,7 @@ app.post("/mcp", async (c) => {
 
   async function getMCPTools(projectId: string) {
 
-console.log("projectId in func" , projectId);
+    console.log("projectId in func", projectId);
 
 
     if (!mcpToolsCache[projectId]) {
@@ -237,7 +238,7 @@ console.log("projectId in func" , projectId);
         .eq("projectId", projectId);
 
       if (error) {
-        throw new Error("Failed to fetch MCP configs");
+        throw new Error("Failed to fetch MCP configs" , error);
       }
 
       if (!configs || configs.length === 0) {
@@ -293,14 +294,14 @@ console.log("projectId in func" , projectId);
 
 
 
-    if (error) {
-      console.log("error", error)
-    }
+  if (error) {
+    console.log("error", error)
+  }
 
-    console.log("ProjectMetadata" ,ProjectMetadata);
-    
+  console.log("ProjectMetadata", ProjectMetadata);
 
-    let [ProjectMetadataObj]  :any= ProjectMetadata
+
+  let [ProjectMetadataObj]: any = ProjectMetadata
   let { identity, instructions, tone }: any = ProjectMetadataObj
 
   if (!projectId) {
@@ -324,7 +325,7 @@ console.log("projectId in func" , projectId);
       if you dont have any answers then say "I dont have any answers"
       
       `,
-       model: workersai('@cf/meta/llama-4-scout-17b-16e-instruct') ,
+      model: workersai('@cf/meta/llama-4-scout-17b-16e-instruct'),
       tools,
       toolChoice: "auto",
       stopWhen: [stepCountIs(10)],
